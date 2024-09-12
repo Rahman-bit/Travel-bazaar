@@ -1,28 +1,27 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { User, UserDocument } from './dto/create-createlead.dto';
+import { User, UserDocument } from './dto/newCustomer.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-// import { UpdateCreateleadDto } from './dto/update-createlead.dto';
 
 @Injectable()
-export class CreateleadService {
-  constructor(@InjectModel('create new leads') private newLeadrModel: Model<UserDocument>) {}
+export class createNewCustomerService {
+  constructor(@InjectModel('Customer') private newCustomerModel: Model<UserDocument>) {}
   
   async create(newLead: User): Promise<User> {
-    // const newUser = new this.newLeadrModel(newLead)
+    // const newUser = new this.newCustomerModel(newLead)
     // const result = await newUser.save();
     // // console.log("Result :", result);
     // return result;
-    const newUser = new this.newLeadrModel({
+    const newUser = new this.newCustomerModel({
       ...newLead,
-      createdDate: new Date().toLocaleString(),
+      createdDate: new Date().toISOString(),
       updatedAt: new Date(),
     });
     return newUser.save();
   }
 
   async findAllUsers() {
-    const allLeads = await this.newLeadrModel.find().exec();
+    const allLeads = await this.newCustomerModel.find().exec();
     // console.log("allLeads :", allLeads);
     return allLeads.map((user)=>({
               id : user.id,
@@ -31,17 +30,17 @@ export class CreateleadService {
               customerEmail : user.customerEmail,
               customerMobile : user.customerMobile,
               createdDate: new Date().toLocaleString(),
-              contry : user.country,
+              country : user.country,
               state : user.state,
               city : user.city,
-              zip : user.zipcode
+              zipcode : user.zipcode
     }))
   }
 
   async findUser(id: string) {
     let user;
       try{
-          user = await this.newLeadrModel.findById(id).exec();
+          user = await this.newCustomerModel.findById(id).exec();
           //  console.log("user Find:", user)
       }catch(error){
             throw new NotFoundException(' Could not found product', error)
@@ -54,16 +53,16 @@ export class CreateleadService {
               customerLastName : user.customerLastName,
               customerEmail : user.customerEmail,
               customerMobile : user.customerMobile,
-              createdDate: new Date().toLocaleString(),
-              contry : user.country,
+              createdDate: new Date().toISOString(),
+              country : user.country,
               state : user.state,
               city : user.city,
-              zip : user.zipcode
+              zipcode : user.zipcode
           };
   }
 
   async updateLead(id: string, updateLeadDto: User): Promise<User> {
-    const updatedLead = await this.newLeadrModel
+    const updatedLead = await this.newCustomerModel
       .findByIdAndUpdate(id, updateLeadDto, { new: true })
       .exec();
     
@@ -74,10 +73,9 @@ export class CreateleadService {
     return updatedLead;
   }
 
-
   async updateUser(id: string, updateCreateleadDto: User) {
 
-    const userData = await this.newLeadrModel.findById(id);
+    const userData = await this.newCustomerModel.findById(id);
     
     if(updateCreateleadDto.customerFirstName) userData.customerFirstName = updateCreateleadDto.customerFirstName;
     if(updateCreateleadDto.customerLastName) userData.customerLastName = updateCreateleadDto.customerLastName;
@@ -94,7 +92,7 @@ export class CreateleadService {
   }
 
  async deleteLead(id: string) {
-    const product = await this.newLeadrModel.deleteOne({_id : id}).exec();
+    const product = await this.newCustomerModel.deleteOne({_id : id}).exec();
     if(product.deletedCount === 0) throw new NotFoundException(" Could not found lead")
     return `This action removes a #${id} lead`;
   }

@@ -1,38 +1,39 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus, Put } from '@nestjs/common';
-import { CreateleadService } from './createlead.service';
-import { User } from './dto/create-createlead.dto';
+import { createNewCustomerService } from './newCustomer.service';
+import { User } from './dto/newCustomer.dto';
 // import { UpdateCreateleadDto } from './dto/update-createlead.dto';
 
-@Controller('createLead')
-export class CreateleadController {
-  constructor(private readonly createleadService: CreateleadService) {}
+@Controller('newcustomer')
+export class CreateNewCustomerController {
+  
+  constructor(private readonly createCustomerService: createNewCustomerService) {}
 
   @Post()
   async create(@Body() createCreateleadDto: User) {
-     const result = await this.createleadService.create(createCreateleadDto);
+     const result = await this.createCustomerService.create(createCreateleadDto);
      return result;
   }
 
   @Get()
   async findAll() {
-    const allUsers = await this.createleadService.findAllUsers();
+    const allUsers = await this.createCustomerService.findAllUsers();
     return allUsers;
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.createleadService.findUser(id);
+    return this.createCustomerService.findUser(id);
   }
 
   @Put(':id')
   async updateLead(@Param('id') id: string, @Body() updateLeadDto: User) {
-    return await this.createleadService.updateLead(id, updateLeadDto);
+    return await this.createCustomerService.updateLead(id, updateLeadDto);
   }
 
-  @Patch(':id')
+  @Put(':id')
   async update(@Param('id') id: string, @Body() updateCreateleadDto: User) {
     try{
-      await this.createleadService.updateUser(id, updateCreateleadDto);
+      await this.createCustomerService.updateUser(id, updateCreateleadDto);
      }catch(error){
       throw new HttpException({
           status : HttpStatus.FORBIDDEN,
@@ -49,7 +50,7 @@ export class CreateleadController {
 
   @Delete(':id')
  async remove(@Param('id') id: string) {
-     await this.createleadService.deleteLead(id);
+     await this.createCustomerService.deleteLead(id);
     //  console.log('deleeted lead:', id)
      return `This action removes a #${id} lead`;
   }

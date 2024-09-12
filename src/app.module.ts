@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { CreateleadModule } from './createlead/createlead.module';
+import { CreateNewCustomerModule } from './newCustomer/newCustomer.module';
 import { MongooseModule } from '@nestjs/mongoose';
+import { NewleadModule } from './newlead/newlead.module';
 
 @Module({
-  imports: [CreateleadModule, MongooseModule.forRoot('mongodb+srv://syed456abdul:Kjie5z1ewYFdbxpr@cluster0.7hm7h.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
+  imports: [CreateNewCustomerModule, NewleadModule, MongooseModule.forRoot('mongodb+srv://syed456abdul:Kjie5z1ewYFdbxpr@cluster0.7hm7h.mongodb.net/bazaar?retryWrites=true&w=majority&appName=Cluster0', {
     
   }), ],
   controllers: [AppController],
