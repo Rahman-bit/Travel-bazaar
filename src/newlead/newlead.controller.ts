@@ -9,7 +9,7 @@ export class NewleadController {
 // http://localhost:3000/newlead
   @Post()
   async create(@Body() newleadDto: NewLead):Promise<NewLead> {
-      // console.log("newleadDto:", newleadDto)
+      console.log("newleadDto:", newleadDto)
       return await this.newleadService.create(newleadDto);
     }
 

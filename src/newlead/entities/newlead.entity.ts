@@ -22,7 +22,6 @@ export const NewLeadSchema = new Schema({
   noOfAdults: { type: String },
   noOfKids: { type: String },
   groupTourPackageList: { type: String },
-  serviceList: {type : [NestedItemSchema], default : []},
   vehicleType: { type: String },
   noOfRooms: { type: String },
   startDate: { type: String },
@@ -40,6 +39,7 @@ export const NewLeadSchema = new Schema({
   shortNote: { type: String },
   hotelPreferences: { type: String },
   leadstatus: { type: String, default: 'All' },
+  serviceList: {type : [NestedItemSchema], default : []},
   invoice: { type: [NestedItemSchema], default: [] },
   itinerary: { type: [NestedItemSchema], default: [] },
 }, { timestamps: true });  

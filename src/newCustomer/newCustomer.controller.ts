@@ -10,8 +10,8 @@ export class CreateNewCustomerController {
 
   @Post()
   async create(@Body() createCreateleadDto: User) {
-     const result = await this.createCustomerService.create(createCreateleadDto);
-     return result;
+     const data = await this.createCustomerService.create(createCreateleadDto);
+     return data;
   }
 
   @Get()
@@ -27,26 +27,25 @@ export class CreateNewCustomerController {
 
   @Put(':id')
   async updateLead(@Param('id') id: string, @Body() updateLeadDto: User) {
-    return await this.createCustomerService.updateLead(id, updateLeadDto);
+    try {
+      const updatedData = await this.createCustomerService.updateData(id, updateLeadDto);
+
+      return {
+        message: `Lead/User with ID: ${id} has been successfully updated`,
+        updatedData: updatedData, 
+      };
+    } catch (error) {
+      throw new HttpException({
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+          message: 'Failed to update lead/user data',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
   }
 
-  @Put(':id')
-  async update(@Param('id') id: string, @Body() updateCreateleadDto: User) {
-    try{
-      await this.createCustomerService.updateUser(id, updateCreateleadDto);
-     }catch(error){
-      throw new HttpException({
-          status : HttpStatus.FORBIDDEN,
-          error : 'somthing goes wrong in server'
-      },
-      HttpStatus.FORBIDDEN,
-          {
-              cause : error
-          }
-      )
-  }
-    return `Lead has been upate with ID :${id}`;
-  }
+
 
   @Delete(':id')
  async remove(@Param('id') id: string) {

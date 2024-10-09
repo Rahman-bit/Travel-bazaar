@@ -8,10 +8,7 @@ export class createNewCustomerService {
   constructor(@InjectModel('Customer') private newCustomerModel: Model<UserDocument>) {}
   
   async create(newLead: User): Promise<User> {
-    // const newUser = new this.newCustomerModel(newLead)
-    // const result = await newUser.save();
-    // // console.log("Result :", result);
-    // return result;
+  
     const newUser = new this.newCustomerModel({
       ...newLead,
       createdDate: new Date().toISOString(),
@@ -61,36 +58,42 @@ export class createNewCustomerService {
           };
   }
 
-  async updateLead(id: string, updateLeadDto: User): Promise<User> {
-    const updatedLead = await this.newCustomerModel
-      .findByIdAndUpdate(id, updateLeadDto, { new: true })
-      .exec();
-    
+  async updateData(id: string, updateDto: User): Promise<User | string> {
+    const existingData = await this.newCustomerModel.findById({_id : id});
+  
+    if (!existingData) {
+      throw new NotFoundException('Could not find the document to update');
+    }
+  
+    if (
+      updateDto.customerFirstName || 
+      updateDto.customerLastName || 
+      updateDto.customerEmail || 
+      updateDto.customerMobile
+    ) {
+      if (updateDto.customerFirstName) existingData.customerFirstName = updateDto.customerFirstName;
+      if (updateDto.customerLastName) existingData.customerLastName = updateDto.customerLastName;
+      if (updateDto.customerEmail) existingData.customerEmail = updateDto.customerEmail;
+      if (updateDto.customerMobile) existingData.customerMobile = updateDto.customerMobile;
+      if (updateDto.country) existingData.country = updateDto.country;
+      if (updateDto.createdDate) existingData.createdDate = updateDto.createdDate;
+      if (updateDto.state) existingData.state = updateDto.state;
+      if (updateDto.city) existingData.city = updateDto.city;
+      if (updateDto.zipcode) existingData.zipcode = updateDto.zipcode;
+  
+      await existingData.save();
+      return `User data has been updated with Id: ${id}`;
+    }
+
+    const updatedLead = await this.newCustomerModel.findByIdAndUpdate(id, updateDto, { new: true }).exec();
+  
     if (!updatedLead) {
       throw new NotFoundException('Could not find the lead to update');
     }
-
+  
     return updatedLead;
   }
-
-  async updateUser(id: string, updateCreateleadDto: User) {
-
-    const userData = await this.newCustomerModel.findById(id);
-    
-    if(updateCreateleadDto.customerFirstName) userData.customerFirstName = updateCreateleadDto.customerFirstName;
-    if(updateCreateleadDto.customerLastName) userData.customerLastName = updateCreateleadDto.customerLastName;
-    if(updateCreateleadDto.customerEmail) userData.customerEmail = updateCreateleadDto.customerEmail;
-    if(updateCreateleadDto.customerMobile) userData.customerMobile = updateCreateleadDto.customerMobile;
-    if(updateCreateleadDto.country) userData.country = updateCreateleadDto.country;
-    if(updateCreateleadDto.createdDate) userData.createdDate = updateCreateleadDto.createdDate;
-    if(updateCreateleadDto.state) userData.state = updateCreateleadDto.state;
-    if(updateCreateleadDto.city) userData.city = updateCreateleadDto.city;
-    if(updateCreateleadDto.zipcode) userData.zipcode = updateCreateleadDto.zipcode;
-
-    userData.save();
-    return `User Data has been updated with Id : ${id}`;
-  }
-
+  
  async deleteLead(id: string) {
     const product = await this.newCustomerModel.deleteOne({_id : id}).exec();
     if(product.deletedCount === 0) throw new NotFoundException(" Could not found lead")

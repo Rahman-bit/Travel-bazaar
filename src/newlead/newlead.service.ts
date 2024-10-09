@@ -67,13 +67,10 @@ export class NewleadService {
 
     // Add the new object to the corresponding nested array
     if (nestedItem === 'serviceList') {
-      // console.log("Adding to serviceList");
       existingLead.serviceList.push(newItemData);
     } else if (nestedItem === 'invoice') {
-      // console.log("Adding to invoice");
       existingLead.invoice.push(newItemData);
     } else if (nestedItem === 'itinerary') {
-      // console.log("Adding to itinerary");
       existingLead.itinerary.push(newItemData);
     } else {
       throw new BadRequestException(`Unknown nested item: ${nestedItem}`);
