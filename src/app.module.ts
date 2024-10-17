@@ -6,9 +6,16 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { NewleadModule } from './newlead/newlead.module';
 import { ItineraryModule } from './itinerary/itinerary.module';
 import { InvoiceModule } from './invoice/invoice.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [CreateNewCustomerModule, NewleadModule, ItineraryModule, MongooseModule.forRoot('mongodb+srv://syed456abdul:Kjie5z1ewYFdbxpr@cluster0.7hm7h.mongodb.net/bazaar?retryWrites=true&w=majority&appName=Cluster0', { }), InvoiceModule, ],
+  imports: [
+    ConfigModule.forRoot(),
+    CreateNewCustomerModule,
+    NewleadModule, 
+    ItineraryModule, 
+    MongooseModule.forRoot(process.env.MONGOOSE_URL),
+    InvoiceModule ],
   controllers: [AppController],
   providers: [AppService],
 })
