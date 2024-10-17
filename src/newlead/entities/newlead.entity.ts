@@ -2,8 +2,8 @@
 import { Schema } from 'mongoose';
 
 const NestedItemSchema = new Schema({
-  serviceName: { type: String, required: true },
-  isChecked: { type: Boolean, required: true },
+  serviceName: { type: String, required: false },
+  isChecked: { type: Boolean, required: false },
   _id: { type: Schema.Types.ObjectId, auto: true },
 });
 

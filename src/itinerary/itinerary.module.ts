@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ItineraryService } from './itinerary.service';
 import { ItineraryController } from './itinerary.controller';
-import { ItinerarySchema } from './entities/createitinerary.entity';
+import { ItinerarySchema } from './entities/itinerary.entity';
 import { MongooseModule } from '@nestjs/mongoose';
 
 @Module({

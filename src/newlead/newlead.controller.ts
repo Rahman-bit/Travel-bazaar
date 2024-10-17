@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Put } from '@nestjs/common';
 import { NewleadService } from './newlead.service';
-import { NestedItem, NewLead, NewLeadDocument } from './dto/create-newlead.dto';
+import { NestedItem, NewLead, NewLeadDocument } from './dto/newlead.dto';
 import { UpdateNewleadDto } from './dto/update-newlead.dto';
 
 @Controller('newlead')
@@ -9,7 +9,7 @@ export class NewleadController {
 // http://localhost:3000/newlead
   @Post()
   async create(@Body() newleadDto: NewLead):Promise<NewLead> {
-      console.log("newleadDto:", newleadDto)
+      // console.log("newleadDto:", newleadDto)
       return await this.newleadService.create(newleadDto);
     }
 

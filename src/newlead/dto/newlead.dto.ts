@@ -2,13 +2,11 @@
 export class CreateNewleadDto {}
 import { Document } from 'mongoose';
 
-
 export interface NestedItem {
   _id?: string;
   serviceName?: string;
   isChecked?: boolean;
 }
-
 
 export interface NewLead {
   uniqueNumber?: string;
@@ -45,6 +43,7 @@ export interface NewLead {
   leadstatus?: string;
   invoice?: NestedItem[];
   itinerary?: NestedItem[];
+  validateLeadIdAndFind: ()=>void;
 }
 
 export interface NewLeadDocument extends NewLead, Document {

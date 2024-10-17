@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { NestedItem, NewLead, NewLeadDocument } from './dto/create-newlead.dto';
+import { NestedItem, NewLead, NewLeadDocument } from './dto/newlead.dto';
 import { UpdateNewleadDto } from './dto/update-newlead.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model, Types } from 'mongoose';
@@ -9,63 +9,43 @@ export class NewleadService {
 
   constructor(@InjectModel('newlead') private newleadModel: Model<NewLeadDocument>) { }
 
+  async validateLeadIdAndFind(leadId: string): Promise<NewLeadDocument> {
+
+    if (!mongoose.Types.ObjectId.isValid(leadId)) {
+      throw new BadRequestException('Invalid Lead ID format Sayyed');
+    }
+
+    const existingLead = await this.newleadModel.findById(leadId).exec();
+
+    if (!existingLead) {
+      throw new NotFoundException(`Lead with id abdul ${leadId} not found`);
+    }
+    return existingLead;
+  }
+
   // POST request
   create(newLead: NewLead) {
-    let newUser;
       try{
-        newUser = new this.newleadModel({
-          ...newLead,
-          serviceList: [...newLead.serviceList],
-          invoice: [...newLead.invoice],
-          itinerary: [...newLead.itinerary]
-        });
-
-         // Transform serviceList, invoice, and itinerary
-      // const transformedLead = {
-      //   ...lead.toObject(), 
-      //   id : lead._id.toString(),
-      //   serviceList: lead.serviceList.map((service) => ({
-      //     ...service.toObject(), 
-      //     id: service._id.toString(), 
-      //     _id: undefined, 
-      //   })),
-      //   invoice: lead.invoice.map((invoice) => ({
-      //     ...invoice.toObject(),
-      //     id: invoice._id.toString(),
-      //     _id: undefined,
-      //   })),
-      //   itinerary: lead.itinerary.map((itinerary) => ({
-      //     ...itinerary.toObject(),
-      //     id: itinerary._id.toString(),
-      //     _id: undefined,
-      //   })),
-      // };
-
+       const newUser = new this.newleadModel({
+            ...newLead,
+            serviceList: [...newLead.serviceList],
+            invoice: [...newLead.invoice],
+            itinerary: [...newLead.itinerary]
+          });
+          
+        return newUser.save();
       }catch(e){
         throw new BadRequestException(`Invalid Data format ${e.message}`);
       }
-   
-    return newUser.save();
   }
   // POST request for add new nested Objects in 
-  async addNestedItem(leadId: string, nestedItem: string, newItemData: NestedItem) {
+async addNestedItem(leadId: string, nestedItem: string, newItemData: NestedItem) {
 
-    if (!mongoose.Types.ObjectId.isValid(leadId)) {
-      throw new BadRequestException('Invalid Lead ID format');
-    }
+    const existingLead = await this.validateLeadIdAndFind(leadId);
 
-    // Fetch the existing lead
-    const existingLead = await this.newleadModel.findById(leadId).exec();
-    if (!existingLead) {
-      throw new NotFoundException(`Lead with id ${leadId} not found`);
-    }
-
-    // Ensure the requested nested array exists
     if (!existingLead[nestedItem]) {
       throw new BadRequestException(`Invalid nested item: ${nestedItem}`);
     }
-
-    // Add the new object to the corresponding nested array
     if (nestedItem === 'serviceList') {
       existingLead.serviceList.push(newItemData);
     } else if (nestedItem === 'invoice') {
@@ -75,85 +55,84 @@ export class NewleadService {
     } else {
       throw new BadRequestException(`Unknown nested item: ${nestedItem}`);
     }
-
     return existingLead.save();
   }
 
 // GET request Find All Leads 
-  async findAll(): Promise<NewLeadDocument> {
-
-    let allLeads
-    try{
-      allLeads = await this.newleadModel.find().exec();
-    }catch(e){
-      throw new BadRequestException(`Could not found Lead ${e.message}`);
-    }
-
-    // Map over the result and transform each lead as required
-    return allLeads.map((lead:NewLeadDocument) => {
+async findAll(): Promise<any[]> {
+  try {
+    const allLeads = await this.newleadModel.find().exec();
+    const formateNestedObjects = (array: any[]) => {
+      return array.map(item => {
+        return {
+          serviceName: item.serviceName,
+          isChecked: item.isChecked, 
+          id: item._id,
+          _id: undefined,
+        };
+      });
+    };
+    
+    return allLeads.map((lead: NewLeadDocument) => {
       return {
         id: lead._id,
-        uniqueNumber : lead.uniqueNumber,
-        createdDate : lead.createdDate,
-        leadTitle : lead.leadTitle,
-        paymentmode : lead.paymentmode,
-        customerName : lead.customerName,
-        getRequirement : lead.getRequirement,
-        noOfInfants : lead.noOfInfants,
-        typeOfHoliday : lead.typeOfHoliday,
-        dateANDtime : lead.dateANDtime,
-        pickUpPoint : lead.pickUpPoint,
-        dropPoint : lead.dropPoint,
-        noOfAdults : lead.noOfAdults,
-        noOfKids : lead.noOfKids,
-        groupTourPackageList : lead.groupTourPackageList,
-        vehicleType : lead.vehicleType,
-        noOfRooms : lead.noOfRooms,
-        startDate : lead.startDate,
-        endDate : lead.endDate,
-        checkIN : lead.checkIN,
-        checkOUT : lead.checkOUT,
-        destination : lead.destination,
-        country : lead.country,
-        noOfDays : lead.noOfDays,
-        typeOfVisa : lead.typeOfVisa,
-        coupleList : lead.coupleList,
-        currencyType : lead.currencyType,
-        budgetForTrip : lead.budgetForTrip,
-        requiredDocuments : lead.requiredDocuments,
-        shortNote : lead.shortNote,
-        hotelPreferences : lead.hotelPreferences,
-        leadstatus : lead.leadstatus,
-        serviceList: lead.serviceList,
-        invoice: lead.invoice,
-        itinerary: lead.itinerary,
+        uniqueNumber: lead.uniqueNumber,
+        createdDate: lead.createdDate,
+        leadTitle: lead.leadTitle,
+        paymentmode: lead.paymentmode,
+        customerName: lead.customerName,
+        getRequirement: lead.getRequirement,
+        noOfInfants: lead.noOfInfants,
+        typeOfHoliday: lead.typeOfHoliday,
+        dateANDtime: lead.dateANDtime,
+        pickUpPoint: lead.pickUpPoint,
+        dropPoint: lead.dropPoint,
+        noOfAdults: lead.noOfAdults,
+        noOfKids: lead.noOfKids,
+        groupTourPackageList: lead.groupTourPackageList,
+        vehicleType: lead.vehicleType,
+        noOfRooms: lead.noOfRooms,
+        startDate: lead.startDate,
+        endDate: lead.endDate,
+        checkIN: lead.checkIN,
+        checkOUT: lead.checkOUT,
+        destination: lead.destination,
+        country: lead.country,
+        noOfDays: lead.noOfDays,
+        typeOfVisa: lead.typeOfVisa,
+        coupleList: lead.coupleList,
+        currencyType: lead.currencyType,
+        budgetForTrip: lead.budgetForTrip,
+        requiredDocuments: lead.requiredDocuments,
+        shortNote: lead.shortNote,
+        hotelPreferences: lead.hotelPreferences,
+        leadstatus: lead.leadstatus,
+        serviceList: formateNestedObjects(lead.serviceList),
+        invoice: formateNestedObjects(lead.invoice),
+        itinerary: formateNestedObjects(lead.itinerary),
       };
     });
+  } catch (e) {
+    throw new BadRequestException(`Could not find Lead: ${e.message}`);
   }
+}
+
 // GET request with ID find single Leads 
   async findOne(id: string) {
-    let lead;
-    try {
-      lead = await this.newleadModel.findById(id)
-      if (!lead) throw new NotFoundException(' Could not found product');
-    } catch (error) {
-      throw new NotFoundException(' Could not found lead', error)
-    }
-
-    return lead;
+      try {
+        // const lead = await this.newleadModel.findById(id).exec();
+        const lead = await this.validateLeadIdAndFind(id);
+        if (!lead) throw new NotFoundException(' Could not found product');
+        return lead;
+      } catch (error) {
+        throw new NotFoundException(' Could not found lead', error)
+      }
   }
 
 // PUT request with ID
   async update(id: string, updateNewlead: NewLead) {
-    
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('Invalid Lead ID format');
-    }
-
-    const existingLead = await this.newleadModel.findById(id).exec();
-    if (!existingLead) {
-      throw new NotFoundException(`Lead with id ${id} not found`);
-    }
+  
+    const existingLead = await this.validateLeadIdAndFind(id);
     // Update main fields 
     existingLead.uniqueNumber = updateNewlead.uniqueNumber || existingLead.uniqueNumber;
     existingLead.createdDate = updateNewlead.createdDate || existingLead.createdDate;
@@ -193,42 +172,30 @@ export class NewleadService {
   //PUT request update nested items with ID
   // {"serviceName": "Updated invoice Name","isChecked": false}
   async updateNestedItem(leadId: string, nestedItem: string, nestedItemId: string, updateData: any) {
+    
     try {
-        if (!mongoose.Types.ObjectId.isValid(leadId)) {
-            throw new BadRequestException('Invalid Lead ID format');
-        }
-
-        const existingLead = await this.newleadModel.findById(leadId).exec();
-        if (!existingLead) {
-            throw new NotFoundException(`Lead with id ${leadId} not found`);
-        }
-
+        const existingLead = await this.validateLeadIdAndFind(leadId);
         const nestedArray = existingLead[nestedItem];
         if (!Array.isArray(nestedArray)) {
             throw new BadRequestException(`Invalid nested item: ${nestedItem} is not an array`);
         }
-
         const itemIndex = nestedArray.findIndex((item: NestedItem) => item._id.toString() === nestedItemId);
         if (itemIndex === -1) {
             throw new NotFoundException(`${nestedItem.slice(0, -1)} with id ${nestedItemId} not found`);
         }
         // Update only the fields that are provided in updateData
         const existingItem = nestedArray[itemIndex];
-
         for (const key in updateData) {
             if (updateData.hasOwnProperty(key)) {
                 existingItem[key] = updateData[key];
             }
         }
-
         await existingLead.save();
-
         return {
             message: `${nestedItem.slice(0, -1)} updated successfully`,
             updatedItem: existingItem
         };
     } catch (error) {
-        // console.error('Error updating nested item:', error.message); // Log the error
         throw new InternalServerErrorException('An error occurred while updating the nested item.');
     }
 }
@@ -251,19 +218,10 @@ export class NewleadService {
   // DELETE request with ID delete Nested Items 
   async deleteNestedItem(leadId: string, nestedItem: string, nestedItemId: string) {
     try{
-        if (!mongoose.Types.ObjectId.isValid(leadId)) {
-          throw new BadRequestException('Invalid Lead ID format');
-        }
-
-        const existingLead = await this.newleadModel.findById(leadId).exec();
-        if (!existingLead) {
-          throw new NotFoundException(`Lead with id ${leadId} not found`);
-        }
-
+        const existingLead = await this.validateLeadIdAndFind(leadId);
         if (!existingLead[nestedItem]) {
           throw new BadRequestException(`Invalid nested item: ${nestedItem}`);
         }
-
         // Generic function to delete nested array item by ID
         const deleteNestedArrayItem = (arrayName: string) => {
           const array = existingLead[arrayName];
@@ -289,7 +247,7 @@ export class NewleadService {
         }
 
         await existingLead.save();
-      
+
           return {
             message: `${nestedItem} ID ${leadId} deleted successfully`,
           };

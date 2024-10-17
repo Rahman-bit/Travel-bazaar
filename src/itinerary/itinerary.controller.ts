@@ -1,37 +1,55 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Put } from '@nestjs/common';
 import { ItineraryService } from './itinerary.service';
-import { CreateItinerary } from './dto/itinerary.dto';
-import { UpdateCreateitineraryDto } from './dto/update-createitinerary.dto';
+import { Itinerary } from './dto/itinerary.dto';
+import { UpdateCreateitineraryDto } from './dto/createitinerary.dto';
 
 @Controller('itinerary')
 export class ItineraryController {
   constructor(private readonly ItineraryService: ItineraryService) {}
-
+  // http://localhost:3500/itinerary
   @Post()
-  create(@Body() itinerary: CreateItinerary) {
-    console.log("itinerary Data :", itinerary)
-    return this.ItineraryService.create(itinerary);
+  async create(@Body() itinerary: Itinerary): Promise<Itinerary> {
+    // console.log("itinerary Data :", itinerary)
+    return this.ItineraryService.createItinerary(itinerary);
   }
-
+  // http://localhost:3500/itinerary
   @Get()
-  async findAll() {
-    const result = await this.ItineraryService.findAll();
-    console.log("Result:", result);
+  async findAllLeads(): Promise<Itinerary[]> {
+    const result = await this.ItineraryService.findAllItinerary();
     return result;
   }
-
+  // http://localhost:3500/itinerary/67096ea8bb8a2cc8bb5bb6f0
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.ItineraryService.findOne(+id);
+  async findOne(@Param('id') id: string): Promise<Itinerary> {
+    return this.ItineraryService.getItineraryById(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCreateitineraryDto: CreateItinerary) {
-    return this.ItineraryService.update(+id, updateCreateitineraryDto);
+  @Put(':id')
+  update(@Param('id') id: string, @Body() itineraryDto: Itinerary) {
+    return this.ItineraryService.updateById(id, itineraryDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.ItineraryService.remove(+id);
+   // Update nested object by ID
+  @Put(':itineraryId/:nestedObjectId')
+  async updateNestedObject(
+    @Param('itineraryId') itineraryId: string,
+    @Param('nestedObjectId') nestedObjectId: string,
+    @Body() updateData: any,
+  ) { 
+    console.log(`PUT request to update nested object with ID: ${nestedObjectId} in itinerary: ${itineraryId}`); // Debug log
+    return this.ItineraryService.updateNestedObject(itineraryId, nestedObjectId, updateData);
   }
+
+  @Delete(':itineraryId')
+  async delete(@Param('itineraryId') itineraryId: string){
+    return this.ItineraryService.deleteLead(itineraryId)
+  }
+
+  @Delete(':itineraryId/:nestedObjectId')
+  async remove(
+      @Param('itineraryId') itineraryId: string,
+      @Param('nestedObjectId') nestedObjectId: string,
+    ) {
+      return this.ItineraryService.deleteNestedObject(itineraryId, nestedObjectId);
+    }
 }

@@ -1,6 +1,12 @@
 
 import { Schema } from 'mongoose';
 
+const ServiceItemSchema = new Schema({
+  id: { type: String },
+  isChecked: { type: Boolean },
+  serviceName: { type: String }
+});
+
 const DescriptionSchema = new Schema({
   id: { type: String },
   dayTitleText: { type: String },
@@ -38,46 +44,46 @@ const HotelSchema = new Schema({
   noteText: { type: String }
 });
 
+const MealTypeSchema = new Schema({
+  id: { type: String },
+  isChecked: { type: Boolean },
+  selectMealType: { type: String }
+});
+
 const MealSchema = new Schema({
   id: { type: String },
   mealTitle: { type: String },
   mealDescription: { type: String },
-  selecdtMeal: [
-    {
-      id: { type: Number },
-      isChecked: { type: Boolean },
-      selectMealType: { type: String }
-    }
-  ]
+  selecdtMeal: { type: [MealTypeSchema], default: [] }
 });
 
 const DayWisePlanSchema = new Schema({
-  id: { type: Number },
+  id: { type: String },
   day: { type: String },
-  description: { type: Array, default: [] },
-  transportation: { type: Array, default: [] },
-  hotel: { type: Array, default: [] },
-  checkoutHotel: { type: Array, default: [] },
+  description: { type: [DescriptionSchema], default: [] },
+  transportation: { type: [TransportationSchema], default: [] },
+  hotel: { type: [HotelSchema], default: [] },
+  checkoutHotel: { type: [HotelSchema], default: [] },
   sightseeing: { type: Array, default: [] },
-  meal: { type: Array, default: [] }
+  meal: { type: [MealSchema], default: [] }
 });
 
 export const ItinerarySchema = new Schema({
-  id: { type: Number },
+  id: { type: String },
   createdDate: { type: String },
   itineraryTitle: { type: String },
   destination: { type: String },
   typeOfHoliday: { type: String },
-  noOfAdults: { type: Number },
-  noOfKids: { type: Number },
+  noOfAdults: { type: String },  // changed from Number to String
+  noOfKids: { type: String },    // changed from Number to String
   startDate: { type: String },
   endDate: { type: String },
   coupleList: { type: String },
   currencyType: { type: String },
-  budgetForTrip: { type: Number },
-  serviceList: { type: Array, default: [] },
-  noOfNights: { type: Number },
-  travellers: { type: Number },
+  budgetForTrip: { type: String }, // changed from Number to String
+  serviceList: { type: [ServiceItemSchema], default: [] },  // updated serviceList
+  noOfNights: { type: String },  // changed from Number to String
+  travellers: { type: String },  // changed from Number to String
   welcomenote: { type: String },
   customerName: { type: String },
   emailId: { type: String },
@@ -92,7 +98,7 @@ export const ItinerarySchema = new Schema({
   note: { type: String },
   inclusion: { type: String },
   exclusion: { type: String },
-  cost: { type: Number },
+  cost: { type: String },  // changed from Number to String
   termsConditions: { type: String },
   tips: { type: String },
   otherVisaInformation: { type: String },
@@ -101,4 +107,3 @@ export const ItinerarySchema = new Schema({
   dayWisePlanFinal: { type: [DayWisePlanSchema], default: [] },
   previousPage: { type: String }
 }, { timestamps: true });
-
