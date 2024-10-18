@@ -7,7 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "start:dev": "nest start --watch",
-    "start": "node dist/main",
+    "start": "node --max-old-space-size=2048 dist/main.js",
     "start:prod": "node dist/main",
     "build": "nest build",
     "prestart:prod": "npm run build",
