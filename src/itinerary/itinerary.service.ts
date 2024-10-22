@@ -1,9 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { Itinerary } from './dto/itinerary.dto';
-import { UpdateCreateitineraryDto } from './dto/createitinerary.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import mongoose, { Model, Types } from 'mongoose';
-import { exec } from 'child_process';
+import mongoose, { Model, MongooseError, Types } from 'mongoose';
 import { ObjectId } from 'mongodb';
 
 @Injectable()
@@ -66,6 +64,7 @@ private recursiveUpdate(
   ): any {
     // Prevent circular references
     if (visited.has(obj)) {
+      
       return null;
     }
     visited.add(obj);
@@ -114,7 +113,7 @@ private recursiveUpdate(
       }
     }
     // Log if nothing was found
-    console.log(`Itinerary Nested object with ID: ${nestedObjectId} not found`);
+    // console.log(`Itinerary Nested object with ID: ${nestedObjectId} not found`);
     return null;  // Return null if no match is found
   }
 
@@ -180,9 +179,7 @@ private recursiveUpdate(
   async getItineraryById(id: string): Promise<Itinerary> {
     try {
       const existingitinerary = await this.validateLeadIdAndFind(id);
-      if (!existingitinerary) {
-        throw new NotFoundException(`Itinerary with ID ${id} not found`);
-      }
+    
       // Apply the replaceId function directly on the single object
       return this.replaceId(existingitinerary.toObject());
     } catch (e) {
@@ -194,38 +191,51 @@ private recursiveUpdate(
     
     const existingItinerary = await this.validateLeadIdAndFind(id);
     
-    if (!existingItinerary) {
-      throw new NotFoundException(`Itinerary with ID ${id} not found`);
-    }
     // Update top-level fields
     Object.assign(existingItinerary, itineraryDto); 
-    // Save the updated itinerary
+  
     await existingItinerary.save();
-    // Return custom message and updated itinerary
-    const successMessage = `Itinerary with ID ${id} was successfully updated.`;
+    
     return {
-      message: successMessage,
+      message: `Itinerary with ID ${id} was successfully updated.`,
       updatedItinerary: this.replaceId(existingItinerary.toObject())
     };
   }
   
-  async updateNestedObject(invoiceId: string, nestedObjectId: string, updateData: any): Promise<{ message: string, updatedObject: any }> {
-    const invoice = await this.findOne(invoiceId);
-    // Call your recursive update method
-    const updatedObject = await this.recursiveUpdate(invoice, nestedObjectId, updateData);
+  async updateNestedObject(
+    itineraryId: string,
+    nestedObjectId: string,
+    updateData: any
+  ): Promise<{ message: string; updatedObject: any }> {
+    try {
+      const itinerary = await this.findOne(itineraryId);
+      if (!itinerary) {
+        throw new NotFoundException(`itinerary with ID ${itineraryId} not found`);
+      }
   
-    if (!updatedObject) {
-      throw new NotFoundException(`Itinerary Nested object with ID ${nestedObjectId} not found`);
+      const updatedObject = await this.recursiveUpdate(itinerary, nestedObjectId, updateData);
+      if (!updatedObject) {
+        throw new NotFoundException(`Itinerary Nested object with ID ${nestedObjectId} not found`);
+      }
+  
+      await itinerary.save();
+  
+      const successMessage = `Itinerary Nested object with ID ${nestedObjectId} was successfully updated.`;
+      return {
+        message: successMessage,
+        updatedObject,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      } else if (error instanceof MongooseError) {
+        throw new BadRequestException(`Mongoose error: ${error.message}`);
+      } else {
+        throw new InternalServerErrorException(`Unexpected error: ${error.message}`);
+      }
     }
-    // Save the changes after updating the nested object
-    await invoice.save();
-    // Return custom message and the updated nested object
-    const successMessage = `Itinerary Nested object with ID ${nestedObjectId} was successfully updated.`;
-    return {
-      message: successMessage,
-      updatedObject
-    };
   }
+  
   
 async deleteLead(itineraryId: string): Promise<{ message: string }>{
   try{

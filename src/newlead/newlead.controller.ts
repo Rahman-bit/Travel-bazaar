@@ -1,16 +1,15 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Put } from '@nestjs/common';
 import { NewleadService } from './newlead.service';
 import { NestedItem, NewLead, NewLeadDocument } from './dto/newlead.dto';
-import { UpdateNewleadDto } from './dto/update-newlead.dto';
 
 @Controller('newlead')
 export class NewleadController {
   constructor(private readonly newleadService: NewleadService) {}
 // http://localhost:3000/newlead
   @Post()
-  async create(@Body() newleadDto: NewLead):Promise<NewLead> {
-      // console.log("newleadDto:", newleadDto)
-      return await this.newleadService.create(newleadDto);
+  async create(@Body() leadDto: NewLeadDocument):Promise<NewLead> {
+      // console.log("leadDto:", leadDto)
+      return await this.newleadService.create(leadDto);
     }
 
   // http://localhost:3000/newlead/:leadId/itinerary
@@ -45,14 +44,13 @@ export class NewleadController {
 
   // URL for PUT request to update nested array of objects
   // http://localhost:3000/newlead/66e16da154ed705c44327faa/itinerary/66e16da154ed705c44327fb2
-  @Put(':leadId/:nestedItem/:nestedItemId')
+  @Put(':leadId/:nestedItemId')
   async updateNestedItem(
     @Param('leadId') leadId: string,
-    @Param('nestedItem') nestedItem: string,
-    @Param('nestedItemId') nestedItemId: string,
+    @Param('nestedItemId') nestedObjectId: string,
     @Body() updateData: NewLead
   ) {
-    return this.newleadService.updateNestedItem(leadId, nestedItem, nestedItemId, updateData);
+    return this.newleadService.updateNestedItem(leadId, nestedObjectId, updateData);
   }
 
   // DELETE request to delete an entire lead by ID

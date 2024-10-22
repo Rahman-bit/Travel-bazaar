@@ -1,47 +1,125 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { NestedItem, NewLead, NewLeadDocument } from './dto/newlead.dto';
-import { UpdateNewleadDto } from './dto/update-newlead.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import mongoose, { Model, Types } from 'mongoose';
+import mongoose, { Model, MongooseError, Types } from 'mongoose';
+import { ObjectId } from 'mongodb';
+import { recursiveUpdate } from 'src/utils/leadupated';
+import { validateLeadIdAndFind } from 'src/utils/leadValidation';
 
 @Injectable()
 export class NewleadService {
 
   constructor(@InjectModel('newlead') private newleadModel: Model<NewLeadDocument>) { }
 
-  async validateLeadIdAndFind(leadId: string): Promise<NewLeadDocument> {
+  // async validateLeadIdAndFind(leadId: string): Promise<NewLeadDocument> {
 
-    if (!mongoose.Types.ObjectId.isValid(leadId)) {
-      throw new BadRequestException('Invalid Lead ID format Sayyed');
+  //   if (!mongoose.Types.ObjectId.isValid(leadId)) {
+  //     throw new BadRequestException('Invalid Lead ID format Sayyed');
+  //   }
+
+  //   const existingLead = await this.newleadModel.findById(leadId).exec();
+
+  //   if (!existingLead) {
+  //     throw new NotFoundException(`Lead with id abdul ${leadId} not found`);
+  //   }
+  //   return existingLead;
+  // }
+
+  // The replaceId method can be declared inside the class like this:
+  private replaceId(obj: any): any {
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.replaceId(item)); 
+    } else if (typeof obj === 'object' && obj !== null) {
+      const newObj: any = {};
+      for (const key in obj) {
+        if (key === '_id') {
+          newObj['id'] = obj[key]; 
+        } else if (typeof obj[key] === 'object') {
+          newObj[key] = this.replaceId(obj[key]); 
+        } else {
+          newObj[key] = obj[key]; 
+        }
+      }
+      return newObj;
     }
+    return obj;
+}
 
-    const existingLead = await this.newleadModel.findById(leadId).exec();
+private recursiveUpdate(
+  obj: any,
+  nestedObjectId: string | ObjectId,
+  updateData: any,
+  visited = new Set<any>(),
+  parent: any = null,
+  parentKey: string | number = null
+): { updatedItem: any; parent: any; parentKey: string | number } | null {
+  // Prevent circular references
+  if (visited.has(obj)) {
+    return null;
+  }
+  visited.add(obj);
 
-    if (!existingLead) {
-      throw new NotFoundException(`Lead with id abdul ${leadId} not found`);
-    }
-    return existingLead;
+  // Check if obj is valid
+  if (!obj || typeof obj !== 'object') {
+    return null; 
   }
 
-  // POST request
-  create(newLead: NewLead) {
-      try{
-       const newUser = new this.newleadModel({
-            ...newLead,
-            serviceList: [...newLead.serviceList],
-            invoice: [...newLead.invoice],
-            itinerary: [...newLead.itinerary]
-          });
-          
-        return newUser.save();
-      }catch(e){
-        throw new BadRequestException(`Invalid Data format ${e.message}`);
+  for (const key in obj) {
+    if (Array.isArray(obj[key])) {
+      // Traverse arrays
+      for (let i = 0; i < obj[key].length; i++) {
+        const item = obj[key][i];
+
+        // Ensure item._id and nestedObjectId are valid ObjectId strings
+        if (item && item._id && ObjectId.isValid(item._id) && ObjectId.isValid(nestedObjectId)) {
+          // Convert item._id and nestedObjectId to ObjectId before comparison
+          if (new ObjectId(item._id).equals(new ObjectId(nestedObjectId))) {
+            console.log(`Found nested object with ID: ${nestedObjectId} at array index: ${i}, key: ${key}`);
+
+            // Update only the properties in updateData without removing other properties
+            Object.assign(item, updateData);
+            return { updatedItem: item, parent, parentKey: key };  
+          }
+        }
+        const result = this.recursiveUpdate(item, nestedObjectId, updateData, visited, obj[key], i);
+        if (result) return result; // If found, return it
       }
+    } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+      // Ensure obj[key]._id and nestedObjectId are valid ObjectId strings
+      if (obj[key]._id && ObjectId.isValid(obj[key]._id) && ObjectId.isValid(nestedObjectId)) {
+        // Convert obj[key]._id and nestedObjectId to ObjectId before comparison
+        if (new ObjectId(obj[key]._id).equals(new ObjectId(nestedObjectId))) {
+          console.log(`Found nested object with ID: ${nestedObjectId} at key: ${key}`);
+
+          // Update only the properties in updateData without removing other properties
+          Object.assign(obj[key], updateData);
+          return { updatedItem: obj[key], parent: obj, parentKey: key };  // Return the updated object and its parent
+        }
+      }
+      // Recur into nested objects
+      const result = this.recursiveUpdate(obj[key], nestedObjectId, updateData, visited, obj, key);
+      if (result) return result; // If found, return it
+    }
+  }
+  return null;  // Return null if no match is found
+}
+
+
+  // POST request
+  async create(leadDto: NewLeadDocument): Promise<NewLeadDocument> {
+    try {
+      const newLead = new this.newleadModel(leadDto);
+      // console.log("Lead object to be saved:", newLead);
+      return await newLead.save();
+    } catch (e) {
+      // console.error("Error during lead creation:", e);
+      throw new BadRequestException(`Invalid Data format: ${e.message}`);
+    }
   }
   // POST request for add new nested Objects in 
 async addNestedItem(leadId: string, nestedItem: string, newItemData: NestedItem) {
 
-    const existingLead = await this.validateLeadIdAndFind(leadId);
+    const existingLead = await validateLeadIdAndFind(leadId, this.newleadModel);
 
     if (!existingLead[nestedItem]) {
       throw new BadRequestException(`Invalid nested item: ${nestedItem}`);
@@ -120,86 +198,60 @@ async findAll(): Promise<any[]> {
 // GET request with ID find single Leads 
   async findOne(id: string) {
       try {
-        // const lead = await this.newleadModel.findById(id).exec();
-        const lead = await this.validateLeadIdAndFind(id);
+        const lead = await validateLeadIdAndFind(id, this.newleadModel);
         if (!lead) throw new NotFoundException(' Could not found product');
-        return lead;
+        return this.replaceId(lead.toObject());
       } catch (error) {
-        throw new NotFoundException(' Could not found lead', error)
+        throw new BadRequestException(' Could not found lead', error)
       }
   }
 
 // PUT request with ID
-  async update(id: string, updateNewlead: NewLead) {
+  async update(id: string, updateNewlead: NewLead): Promise<{ message: string, updatedItinerary: NewLead }> {
   
-    const existingLead = await this.validateLeadIdAndFind(id);
-    // Update main fields 
-    existingLead.uniqueNumber = updateNewlead.uniqueNumber || existingLead.uniqueNumber;
-    existingLead.createdDate = updateNewlead.createdDate || existingLead.createdDate;
-    existingLead.leadTitle = updateNewlead.leadTitle || existingLead.leadTitle;
-    existingLead.paymentmode = updateNewlead.paymentmode || existingLead.paymentmode;
-    existingLead.customerName = updateNewlead.customerName || existingLead.customerName;
-    existingLead.getRequirement = updateNewlead.getRequirement || existingLead.getRequirement;
-    existingLead.noOfInfants = updateNewlead.noOfInfants || existingLead.noOfInfants;
-    existingLead.typeOfHoliday = updateNewlead.typeOfHoliday || existingLead.typeOfHoliday;
-    existingLead.dateANDtime = updateNewlead.dateANDtime || existingLead.dateANDtime;
-    existingLead.pickUpPoint = updateNewlead.pickUpPoint || existingLead.pickUpPoint;
-    existingLead.dropPoint = updateNewlead.dropPoint || existingLead.dropPoint;
-    existingLead.noOfAdults = updateNewlead.noOfAdults || existingLead.noOfAdults;
-    existingLead.noOfKids = updateNewlead.noOfKids || existingLead.noOfKids;
-    existingLead.groupTourPackageList = updateNewlead.groupTourPackageList || existingLead.groupTourPackageList;
-    existingLead.vehicleType = updateNewlead.vehicleType || existingLead.vehicleType;
-    existingLead.noOfRooms = updateNewlead.noOfRooms || existingLead.noOfRooms;
-    existingLead.startDate = updateNewlead.startDate || existingLead.startDate;
-    existingLead.endDate = updateNewlead.endDate || existingLead.endDate;
-    existingLead.checkIN = updateNewlead.checkIN || existingLead.checkIN;
-    existingLead.checkOUT = updateNewlead.checkOUT || existingLead.checkOUT;
-    existingLead.destination = updateNewlead.destination || existingLead.destination;
-    existingLead.country = updateNewlead.country || existingLead.country;
-    existingLead.noOfDays = updateNewlead.noOfDays || existingLead.noOfDays;
-    existingLead.typeOfVisa = updateNewlead.typeOfVisa || existingLead.typeOfVisa;
-    existingLead.coupleList = updateNewlead.coupleList || existingLead.coupleList;
-    existingLead.currencyType = updateNewlead.currencyType || existingLead.currencyType;
-    existingLead.budgetForTrip = updateNewlead.budgetForTrip || existingLead.budgetForTrip;
-    existingLead.requiredDocuments = updateNewlead.requiredDocuments || existingLead.requiredDocuments;
-    existingLead.shortNote = updateNewlead.shortNote || existingLead.shortNote;
-    existingLead.hotelPreferences = updateNewlead.hotelPreferences || existingLead.hotelPreferences;
-    existingLead.leadstatus = updateNewlead.leadstatus || existingLead.leadstatus;
-
-    return existingLead.save();
+    const existingLead = await validateLeadIdAndFind(id, this.newleadModel);
+     // Update top-level fields
+     Object.assign(existingLead, updateNewlead); 
+     await existingLead.save();
+    
+    return {
+      message: `Lead with ID ${id} was successfully updated.`,
+      updatedItinerary: this.replaceId(existingLead.toObject())
+    };
   }
 
   //PUT request update nested items with ID
-  // {"serviceName": "Updated invoice Name","isChecked": false}
-  async updateNestedItem(leadId: string, nestedItem: string, nestedItemId: string, updateData: any) {
-    
+  async updateNestedItem(leadId: string, nestedObjectId: string, updateData: any) {
     try {
-        const existingLead = await this.validateLeadIdAndFind(leadId);
-        const nestedArray = existingLead[nestedItem];
-        if (!Array.isArray(nestedArray)) {
-            throw new BadRequestException(`Invalid nested item: ${nestedItem} is not an array`);
+        const existingLead = await validateLeadIdAndFind(leadId, this.newleadModel);
+        
+        const result = recursiveUpdate(existingLead, nestedObjectId, updateData);
+        
+        if (!result) {
+            throw new NotFoundException(`Lead Nested object with ID ${nestedObjectId} not found`);
         }
-        const itemIndex = nestedArray.findIndex((item: NestedItem) => item._id.toString() === nestedItemId);
-        if (itemIndex === -1) {
-            throw new NotFoundException(`${nestedItem.slice(0, -1)} with id ${nestedItemId} not found`);
-        }
-        // Update only the fields that are provided in updateData
-        const existingItem = nestedArray[itemIndex];
-        for (const key in updateData) {
-            if (updateData.hasOwnProperty(key)) {
-                existingItem[key] = updateData[key];
-            }
-        }
+
+        const { updatedItem } = result;
+
+        // Save the parent document to persist changes in nested objects
         await existingLead.save();
+
+        const successMessage = `Lead Nested object with ID ${nestedObjectId} was successfully updated.`;
         return {
-            message: `${nestedItem.slice(0, -1)} updated successfully`,
-            updatedItem: existingItem
+            message: successMessage,
+            updatedItem
         };
     } catch (error) {
-        throw new InternalServerErrorException('An error occurred while updating the nested item.');
+      if (error instanceof NotFoundException) {
+        throw error;
+      } else if (error instanceof MongooseError) {
+        throw new BadRequestException(`Mongoose error: ${error.message}`);
+      } else {
+        throw new InternalServerErrorException(`Unexpected error: ${error.message}`);
+      }
     }
 }
-
+  
   //DELETE request delete entire lead 
   async deleteLead(leadId: string): Promise<{ message: string }> {
     try{
@@ -218,7 +270,7 @@ async findAll(): Promise<any[]> {
   // DELETE request with ID delete Nested Items 
   async deleteNestedItem(leadId: string, nestedItem: string, nestedItemId: string) {
     try{
-        const existingLead = await this.validateLeadIdAndFind(leadId);
+        const existingLead = await validateLeadIdAndFind(leadId, this.newleadModel);
         if (!existingLead[nestedItem]) {
           throw new BadRequestException(`Invalid nested item: ${nestedItem}`);
         }

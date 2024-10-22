@@ -36,7 +36,6 @@ export class ItineraryController {
     @Param('nestedObjectId') nestedObjectId: string,
     @Body() updateData: any,
   ) { 
-    console.log(`PUT request to update nested object with ID: ${nestedObjectId} in itinerary: ${itineraryId}`); // Debug log
     return this.ItineraryService.updateNestedObject(itineraryId, nestedObjectId, updateData);
   }
 
